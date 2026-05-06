@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Password Strength Analyzer — Security Tool</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Courier New", monospace;
+        background: #0d1117;
+        color: #c9d1d9;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+      .container {
+        width: 100%;
+        max-width: 720px;
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 1.4rem;
+        color: #58a6ff;
+        margin-bottom: 0.3rem;
+      }
+      .subtitle {
+        font-size: 0.85rem;
+        color: #8b949e;
+        margin-bottom: 1.5rem;
+      }
+      .input-wrap {
+        position: relative;
+        margin-bottom: 1rem;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        color: #c9d1d9;
+        font-size: 1.1rem;
+        font-family: monospace;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input:focus {
+        border-color: #58a6ff;
+      }
+      .toggle-btn {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #8b949e;
+        cursor: pointer;
+        font-size: 1.1rem;
+      }
+      .strength-bar {
+        height: 6px;
+        background: #21262d;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+      }
+      .strength-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition:
+          width 0.4s ease,
+          background 0.4s ease;
+        width: 0%;
+      }
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 1.5rem;
+      }
+      .metric {
+        background: #0d1117;
+        border: 1px solid #21262d;
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+      .metric-label {
+        font-size: 11px;
+        color: #8b949e;
+        margin-bottom: 4px;
+      }
+      .metric-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 1.5rem;
+      }
+      .card {
+        background: #0d1117;
+        border: 1px solid #21262d;
+        border-radius: 8px;
+        padding: 14px 16px;
+      }
+      .card-title {
+        font-size: 12px;
+        color: #58a6ff;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 10px;
+      }
+      .char-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        margin-bottom: 5px;
+      }
+      .check {
+        color: #3fb950;
+      }
+      .cross {
+        color: #f85149;
+      }
+      .crack-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        padding: 4px 0;
+        border-bottom: 1px solid #21262d;
+      }
+      .crack-row:last-child {
+        border-bottom: none;
+      }
+      .crack-label {
+        color: #8b949e;
+      }
+      .crack-time {
+        color: #c9d1d9;
+        font-weight: 700;
+      }
+      .warning-block {
+        background: #1c1209;
+        border: 1px solid #3d2b07;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 1rem;
+      }
+      .warning-title {
+        font-size: 12px;
+        color: #d29922;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .warning-item {
+        font-size: 13px;
+        color: #b08800;
+        margin-bottom: 4px;
+      }
+      .info-block {
+        background: #0c1825;
+        border: 1px solid #0c2d4e;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 1rem;
+      }
+      .info-title {
+        font-size: 12px;
+        color: #58a6ff;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .info-item {
+        font-size: 13px;
+        color: #3b82f6;
+        margin-bottom: 4px;
+      }
+      .brute-block {
+        background: #0d1117;
+        border: 1px solid #21262d;
+        border-radius: 8px;
+        padding: 14px 16px;
+        font-size: 13px;
+        color: #8b949e;
+      }
+      #results {
+        display: none;
+      }
+      #emptyState {
+        text-align: center;
+        padding: 2rem 0;
+        color: #8b949e;
+      }
+      @media (max-width: 520px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔐 Password Strength Analyzer</h1>
+      <p class="subtitle">
+        Entropy analysis · Crack time estimates · Pattern detection ·
+        Brute-force simulation
+      </p>
+
+      <div class="input-wrap">
+        <input
+          type="password"
+          id="pwInput"
+          placeholder="Enter a password to analyze..."
+          autocomplete="new-password"
+        />
+        <button class="toggle-btn" id="toggleVis" title="Show/hide password">
+          👁
+        </button>
+      </div>
+
+      <div class="strength-bar">
+        <div class="strength-fill" id="strengthFill"></div>
+      </div>
+
+      <div id="results">
+        <div class="grid-4">
+          <div class="metric">
+            <div class="metric-label">Strength</div>
+            <div class="metric-value" id="strengthLabel"></div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Entropy</div>
+            <div
+              class="metric-value"
+              id="entropyVal"
+              style="color: #58a6ff"
+            ></div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Length</div>
+            <div class="metric-value" id="lengthVal"></div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Unique chars</div>
+            <div class="metric-value" id="uniqueVal"></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">Character types</div>
+            <div id="charTypes"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Crack time estimates</div>
+            <div id="crackTimes"></div>
+          </div>
+        </div>
+
+        <div id="warningsBlock" class="warning-block" style="display: none">
+          <div class="warning-title">⚠ Warnings detected</div>
+          <div id="warningsList"></div>
+        </div>
+
+        <div id="suggestionsBlock" class="info-block" style="display: none">
+          <div class="info-title">→ How to improve</div>
+          <div id="suggestionsList"></div>
+        </div>
+
+        <div class="brute-block">
+          <div
+            style="
+              font-size: 12px;
+              color: #58a6ff;
+              font-weight: 700;
+              margin-bottom: 6px;
+            "
+          >
+            BRUTE-FORCE ANALYSIS
+          </div>
+          <div id="bruteResult"></div>
+        </div>
+      </div>
+
+      <div id="emptyState">Start typing to analyze your password</div>
+    </div>
+
+    <script>
+      // ── Same logic as Python backend, re-implemented in JS for standalone use ──
+
+      const COMMON = new Set([
+        "password",
+        "123456",
+        "password1",
+        "qwerty",
+        "abc123",
+        "letmein",
+        "monkey",
+        "1234567890",
+        "iloveyou",
+        "admin",
+        "welcome",
+        "login",
+        "passw0rd",
+        "master",
+        "hello",
+        "shadow",
+        "sunshine",
+        "princess",
+        "dragon",
+        "football",
+      ]);
+
+      function calcEntropy(pw) {
+        let pool = 0;
+        if (/[a-z]/.test(pw)) pool += 26;
+        if (/[A-Z]/.test(pw)) pool += 26;
+        if (/[0-9]/.test(pw)) pool += 10;
+        if (/[^a-zA-Z0-9]/.test(pw)) pool += 32;
+        if (!pool) return 0;
+        return +(pw.length * Math.log2(pool)).toFixed(1);
+      }
+
+      function secondsToHuman(s) {
+        if (s < 1) return "Instant";
+        const steps = [
+          [60, "second"],
+          [60, "minute"],
+          [24, "hour"],
+          [365, "day"],
+          [Infinity, "year"],
+        ];
+        let v = s,
+          unit = "second";
+        for (const [f, n] of steps) {
+          if (v < f) {
+            unit = n;
+            break;
+          }
+          v /= f;
+        }
+        v = Math.round(v);
+        if (v > 1e9) return v.toExponential(2) + " " + unit + "s";
+        return v.toLocaleString() + " " + unit + (v !== 1 ? "s" : "");
+      }
+
+      function crackTimes(entropy) {
+        const combos = Math.pow(2, entropy);
+        return [
+          ["Online (rate-limited)", 100],
+          ["Online (unthrottled)", 10000],
+          ["Offline — bcrypt", 1e7],
+          ["Offline — MD5/GPU", 1e11],
+        ].map(([label, speed]) => ({
+          label,
+          time: secondsToHuman(combos / 2 / speed),
+        }));
+      }
+
+      function getScore(pw, entropy) {
+        if (COMMON.has(pw.toLowerCase())) return 0;
+        if (pw.length < 6 || entropy < 28) return 0;
+        if (entropy < 36) return 1;
+        if (entropy < 50) return 2;
+        if (entropy < 65) return 3;
+        return 4;
+      }
+
+      function analyze(pw) {
+        const entropy = calcEntropy(pw);
+        const score = getScore(pw, entropy);
+        const labels = ["Very Weak", "Weak", "Fair", "Strong", "Very Strong"];
+        const colors = ["#f85149", "#e3a22e", "#d2a534", "#3fb950", "#1f8b4c"];
+        const widths = [15, 35, 55, 75, 100];
+
+        document.getElementById("strengthFill").style.cssText =
+          `width:${widths[score]}%;background:${colors[score]};`;
+        document.getElementById("strengthLabel").textContent = labels[score];
+        document.getElementById("strengthLabel").style.color = colors[score];
+        document.getElementById("entropyVal").textContent = entropy + " bits";
+        document.getElementById("lengthVal").textContent = pw.length + " chars";
+        document.getElementById("uniqueVal").textContent = new Set(pw).size;
+
+        const charMap = [
+          [/[a-z]/.test(pw), "lowercase a–z"],
+          [/[A-Z]/.test(pw), "uppercase A–Z"],
+          [/[0-9]/.test(pw), "numbers 0–9"],
+          [/[^a-zA-Z0-9]/.test(pw), "special chars"],
+        ];
+        document.getElementById("charTypes").innerHTML = charMap
+          .map(
+            ([has, label]) =>
+              `<div class="char-row"><span class="${has ? "check" : "cross"}">${has ? "✓" : "✗"}</span><span style="color:${has ? "#c9d1d9" : "#8b949e"}">${label}</span></div>`,
+          )
+          .join("");
+
+        document.getElementById("crackTimes").innerHTML = crackTimes(entropy)
+          .map(
+            (t) =>
+              `<div class="crack-row"><span class="crack-label">${t.label}</span><span class="crack-time">${t.time}</span></div>`,
+          )
+          .join("");
+
+        const warnings = [];
+        if (COMMON.has(pw.toLowerCase()))
+          warnings.push("Most commonly used password");
+        if (/(.)\1{2,}/.test(pw))
+          warnings.push("Contains repeated characters (e.g. 'aaa')");
+        if (
+          /(012|123|234|345|456|567|678|789|890|abc|bcd|qwe|wer|ert)/i.test(pw)
+        )
+          warnings.push("Contains sequential pattern");
+        if (/^[A-Z][a-z]+\d{1,4}$/.test(pw))
+          warnings.push("Predictable format: Capital + word + numbers");
+        if (/(password|pass|pwd|admin|login)/i.test(pw))
+          warnings.push("Contains authentication-related keyword");
+        if (pw.length < 8)
+          warnings.push("Too short — minimum 8 characters recommended");
+        if (!/[^a-zA-Z0-9]/.test(pw)) warnings.push("No special characters");
+
+        const wb = document.getElementById("warningsBlock");
+        wb.style.display = warnings.length ? "block" : "none";
+        document.getElementById("warningsList").innerHTML = warnings
+          .map((w) => `<div class="warning-item">⚠ ${w}</div>`)
+          .join("");
+
+        const suggestions = [];
+        if (pw.length < 12) suggestions.push("Use at least 12 characters");
+        if (!/[A-Z]/.test(pw)) suggestions.push("Add uppercase letters");
+        if (!/[0-9]/.test(pw)) suggestions.push("Add numbers");
+        if (!/[^a-zA-Z0-9]/.test(pw))
+          suggestions.push("Add special characters (!@#$%^&*)");
+        if (score <= 1)
+          suggestions.push("Consider a passphrase: 4 random words");
+        if (score >= 3)
+          suggestions.push("Strong — store it in a password manager");
+
+        const sb = document.getElementById("suggestionsBlock");
+        sb.style.display = suggestions.length ? "block" : "none";
+        document.getElementById("suggestionsList").innerHTML = suggestions
+          .map((s) => `<div class="info-item">→ ${s}</div>`)
+          .join("");
+
+        const charset =
+          (/[a-z]/.test(pw) ? 26 : 0) +
+          (/[A-Z]/.test(pw) ? 26 : 0) +
+          (/[0-9]/.test(pw) ? 10 : 0) +
+          (/[^a-zA-Z0-9]/.test(pw) ? 32 : 0);
+        let total = 0;
+        for (let i = 1; i <= pw.length; i++) total += Math.pow(charset, i);
+        const bruteMsg =
+          pw.length <= 4
+            ? `Short password — a ${pw.length}-char password takes under 1ms to crack at 10B attempts/sec.`
+            : `${total > 1e15 ? total.toExponential(2) : Math.round(total).toLocaleString()} combinations to exhaust. ` +
+              `This password is too complex to brute-force simulate — that's a good thing. ` +
+              `An attacker trying billions of guesses per second would need longer than the age of the universe to crack it.`;
+        document.getElementById("bruteResult").textContent = bruteMsg;
+
+        document.getElementById("results").style.display = "block";
+        document.getElementById("emptyState").style.display = "none";
+      }
+
+      let debounce;
+      document.getElementById("pwInput").addEventListener("input", function () {
+        clearTimeout(debounce);
+        const pw = this.value;
+        if (!pw) {
+          document.getElementById("results").style.display = "none";
+          document.getElementById("emptyState").style.display = "block";
+          document.getElementById("strengthFill").style.width = "0%";
+          return;
+        }
+        debounce = setTimeout(() => analyze(pw), 120);
+      });
+
+      let shown = false;
+      document.getElementById("toggleVis").addEventListener("click", () => {
+        shown = !shown;
+        document.getElementById("pwInput").type = shown ? "text" : "password";
+      });
+    </script>
+  </body>
+</html>
